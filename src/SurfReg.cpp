@@ -10,6 +10,8 @@
 
 pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr rCloud (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
 pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr mCloud (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr rCloudVis (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr mCloudVis (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
 ThreadMutexObject<bool> done(false);
 ThreadMutexObject<int> count(0);
 ThreadMutexObject<int> iteration(0);
@@ -155,21 +157,32 @@ int main(int argc, char ** argv)
     int argcam = 4;
     char * cameraArgs [] = {"", "-cam", "0.0188428,18.8428/-0.62153,0.55779,-0.0789679/3.62544,4.44186,3.40479/-0.511828,0.811792,-0.281115/0.8575/1920,1033/0,46", "bla"};
 
+    mCloudVis->insert(mCloudVis->end(), mCloud->begin(), mCloud->end());
+    rCloudVis->insert(rCloudVis->end(), rCloud->begin(), rCloud->end());
+
     cloudViewer.getCameraParameters(argcam, cameraArgs);
     cloudViewer.updateCamera();
     cloudViewer.setSize(1680, 1050);
-    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal> color(rCloud);
-    cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(rCloud, color, "Cloud");
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal> color(rCloudVis);
+    cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(rCloudVis, color, "Cloud");
 
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBNormal> colorM(1, 0, 0);
-    cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(mCloud, colorM, "MCloud");
+    cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(mCloudVis, colorM, "MCloud");
     cloudViewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, 0.1, "MCloud");
 
     boost::thread * computeThread = new boost::thread(computeAlignment);
 
+    float theta = 0.01f;
+
+    Eigen::Matrix4f rotationTrans;
+    rotationTrans <<  cos(theta), 0, sin(theta), 0,
+                               0, 1,          0, 0,
+                     -sin(theta), 0, cos(theta), 0,
+                               0, 0,          0, 1;
+
     while(!done.getValue())
     {
-        cloudViewer.spinOnce(330, true);
+        cloudViewer.spinOnce(33, true);
         cloudViewer.removeShape("text");
 
         int countVal = count.getValue();
@@ -190,6 +203,15 @@ int main(int argc, char ** argv)
 
             cloudViewer.addText(strs.str(), 20, 20, 50, 1, 0, 0, "text");
         }
+
+        cloudViewer.removeAllPointClouds();
+
+        pcl::transformPointCloud(*mCloudVis, *mCloudVis, rotationTrans);
+        pcl::transformPointCloud(*rCloudVis, *rCloudVis, rotationTrans);
+
+        cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(rCloudVis, color, "Cloud");
+        cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(mCloudVis, colorM, "MCloud");
+        cloudViewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, 0.1, "MCloud");
     }
 
     computeThread->join();
