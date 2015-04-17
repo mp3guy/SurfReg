@@ -163,6 +163,12 @@ int main(int argc, char ** argv)
                                   1,
                                   0);
     cloudViewer.setSize(1680, 1050);
+
+    if(pcl::console::find_argument(argc, argv, "-f") != -1)
+    {
+        cloudViewer.setFullScreen(true);
+    }
+
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal> color(rCloud);
     cloudViewer.addPointCloud<pcl::PointXYZRGBNormal>(rCloud, color, "Cloud");
 
