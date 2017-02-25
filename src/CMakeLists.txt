@@ -9,6 +9,10 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+if(NOT "${PCL_LIBRARIES}" STREQUAL "")
+  list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
+endif()
+
 set(CMAKE_CXX_FLAGS "-O3 -msse2 -msse3")
 
 add_executable (SurfReg SurfReg.cpp)
